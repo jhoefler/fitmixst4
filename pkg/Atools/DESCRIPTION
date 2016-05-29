@@ -1,0 +1,16 @@
+Package: Atools
+Type: Package
+Title: Atools
+Version: 0.2
+Date: 2013-30-17
+Author: Andi Böck
+Maintainer: Andreas Böck <andreas.boeck@tum.de>
+Description: Collection of functions
+License: GPL
+Depends:
+    Hmisc,
+    ROCR,
+    mvtnorm,
+    pROC,
+    plyr,
+    ggplot2

@@ -1,0 +1,8 @@
+
+GSL_CFLAGS = -I/usr/local/include
+GSL_LIBS   = -L/usr/local/lib -lgsl -lgslcblas
+RCPP_LDFLAGS = /Library/Frameworks/R.framework/Versions/2.15/Resources/library/Rcpp/lib/x86_64/libRcpp.a
+
+# combine with standard arguments for R
+PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include
+PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS)

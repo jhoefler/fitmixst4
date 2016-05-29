@@ -1,0 +1,7 @@
+GSL_CFLAGS=`${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe -e "RcppGSL:::CFlags()"` 
+GSL_LIBS=`${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe -e "RcppGSL:::LdFlags()"` 
+RCPP_LDFLAGS=`${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe -e "Rcpp:::LdFlags()"`
+
+# combine with standard arguments for R
+PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include
+PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS)
