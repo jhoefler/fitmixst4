@@ -1,10 +1,8 @@
 
-GSL_CFLAGS = -IC:/progs/GSL_test2//include
-GSL_LIBS   = -LC:/progs/GSL_test2//lib -lgsl -lgslcblas
-RCPP_LDFLAGS = C:/progs/R/R-3.0.0/library/Rcpp/lib/x64/libRcpp.a
+GSL_CFLAGS = -I/include
+GSL_LIBS   = -L/lib -lgsl -lgslcblas
+RCPP_LDFLAGS = 
 
 # combine with standard arguments for R
-PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include 
-#-fopenmp -lgomp
-PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) 
-#-fopenmp -lgomp
+PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include -fopenmp -lgomp
+PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -fopenmp -lgomp
