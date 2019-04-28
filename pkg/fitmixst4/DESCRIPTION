@@ -1,8 +1,8 @@
 Package: fitmixst4
 Type: Package
 Title: Fitting mixture of skew t distribution
-Version: 0.266
-Date: 2014-09-17
+Version: 0.272
+Date: 2019-04-27
 Author: Josef Hoefler
 Maintainer: Josef Hoefler <josef.hoefler@tum.de>
 Description: Fitting mixture of skew t distribution
