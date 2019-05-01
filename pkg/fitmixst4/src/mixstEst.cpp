@@ -181,7 +181,7 @@ SEXP pro, SEXP mu, SEXP Sigma, SEXP delta, SEXP nu, SEXP verbose, SEXP beta)
   std::vector <double> likConvergence(iitermax);
   
   std::vector< std::vector<double> > test1(gg), test2(gg), test3(gg), test4(gg), pro3(gg);
-  while(iter < iitermax && aitkenError > eerror || iter < 2)
+  while( (iter < iitermax) && (aitkenError > eerror) || (iter < 2) )
   {
     //interrupt running while
     if (checkInterrupt()) { break;};

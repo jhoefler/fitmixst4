@@ -35,7 +35,6 @@ RcppExport SEXP dmmixstC( SEXP y, SEXP pro, SEXP mu, SEXP Sigma, SEXP delta, SEX
   Rcpp::List delta_neu (delta);
   arma::vec nu_neu = Rcpp::as<arma::vec> (nu);
   
-  int p = yy.n_cols;
   int n = yy.n_rows;
   int g = pro_neu.size();
   

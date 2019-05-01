@@ -136,7 +136,7 @@ int* inform)    // inform message goes here
  //multivariate t distribution
  double dmtc(arma::vec x, arma::vec mu, arma::mat sigma, double df){
    int p = x.size();
-   if(det(sigma) == 0 | sigma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t distribution. Sigma not invertible.") );}
+   if( (det(sigma) == 0) || sigma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t distribution. Sigma not invertible.") );}
    arma::mat SInv = sigma.i();
    arma::vec xmu = x-mu;
    double Q = arma::as_scalar(((SInv * xmu) % xmu).t() * arma::ones<arma::vec>(p));
@@ -202,7 +202,7 @@ int* inform)    // inform message goes here
    int p = mu_neu.size();
    
    arma::mat lambda = Sigma_neu + arma::pow(delta_neu, 2);
-   if(det(lambda) == 0 | lambda.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t distribution. Lambda not invertible.") );}
+   if( (det(lambda) == 0) || lambda.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t distribution. Lambda not invertible.") );}
    arma::mat lambdaInv = arma::inv(lambda);
    arma::colvec correctedMu = xx - mu_neu;
    
@@ -658,7 +658,7 @@ int* inform)    // inform message goes here
        double cpNu = nu2[h];
        double cpPro = pro2[h];
        
-       if(det(cpSigma) == 0 | cpSigma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t density.") );}
+       if( (det(cpSigma) == 0) || cpSigma.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t density.") );}
        
        // #ifndef __APPLE__
        // #pragma omp parallel for
@@ -679,8 +679,6 @@ int* inform)    // inform message goes here
      
      for(int i = 0; i < gg; i++){
        
-       double t1,t2;
-       
        arma::colvec muArma = Rcpp::as<arma::colvec>(mu2[i]);
        arma::mat SigmaArma = Rcpp::as<arma::mat>(Sigma2[i]);
        arma::colvec deltaArma = Rcpp::as<arma::colvec>(delta2[i]);
@@ -689,7 +687,7 @@ int* inform)    // inform message goes here
        arma::mat Omega, Lambda, OmegaInv;
        
        Omega = SigmaArma + arma::pow(DeltaArma, 2);
-       if(det(Omega) == 0 | Omega.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Omega not invertible.") );}
+       if( (det(Omega) == 0) || Omega.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Omega not invertible.") );}
        OmegaInv = Omega.i();
        Lambda = arma::eye(p,p) - DeltaArma.t() * OmegaInv * DeltaArma;
        
@@ -718,7 +716,7 @@ int* inform)    // inform message goes here
          
          y_star.row(j)  = q.row(j)  * sqrt((nu2[i] + p) / (nu2[i] + d[j] ));
          
-         if(det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0 | Lambda.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for distribution function is not invertible.") );}
+         if(det( (((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0) || Lambda.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for distribution function is not invertible.") );}
          t1vec(j) = pmtc(q.row(j).t() * sqrt((nu2[i] + p + 2) / (nu2[i] + d[j])), arma::zeros(p,1), Lambda, round(nu2[i] + p + 2));
          t2vec(j) = pmtc(y_star.row(j).t(), arma::zeros(p,1), Lambda, round(nu2[i] + p));
          
@@ -730,7 +728,7 @@ int* inform)    // inform message goes here
          arma::vec S2;
          arma::mat S3;
          
-         if(det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0 | Lambda.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for moments is not invertible.") );}
+         if( (det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0) || Lambda.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for moments is not invertible.") );}
          // int truncerr = truncatedt(&S2, &S3, arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
          // ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
          
@@ -782,7 +780,7 @@ int* inform)    // inform message goes here
        }
        
        //for schleife über anzahl der komponenten (i von oben)
-       if(mutmp2 == 0 | mutmp2 != mutmp2) { throw( std::runtime_error("C++ error: EM algorithm not converging! Division by zero for recalculating mu.") );}
+       if((mutmp2 == 0) || mutmp2 != mutmp2) { throw( std::runtime_error("C++ error: EM algorithm not converging! Division by zero for recalculating mu.") );}
        muArma = (mutmp - DeltaArma * mutmp1) / mutmp2;
        mu_neu[i] = muArma;
        
@@ -794,9 +792,9 @@ int* inform)    // inform message goes here
        
        for(int k = 0; k < n; k++){
          deltmp1 += pro4(k,i) * term3.row(k).t() * (yyArma.row(k)  - muArma.t());
-         if(term4.slice(k).has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! term4 slice." + k) );}
+         if( term4.slice(k).has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! term4 slice." + k) );}
          deltmp2 += pro4(k,i) * term4.slice(k);
-         if(deltmp2.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Delta tmp has nan.") );}
+         if( deltmp2.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Delta tmp has nan.") );}
          
          sumterm1pro3 += term1[k] * pro4(k,i);
          sumterm1pro3nu += pro4(k,i)* (term2[k] - term1[k] -1);
@@ -804,10 +802,10 @@ int* inform)    // inform message goes here
        
        
        
-       if(det(SigmaArma)  == 0 | SigmaArma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Matrix sigma not invertible.") );}
+       if( (det(SigmaArma)  == 0) || SigmaArma.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Matrix sigma not invertible.") );}
        arma::mat sigInv = SigmaArma.i();
        
-       if(det(sigInv % deltmp2) == 0 | sigInv.has_nan() | deltmp2.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in calculation of lambda.") );}
+       if((det(sigInv % deltmp2) == 0) || sigInv.has_nan() || deltmp2.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in calculation of lambda.") );}
        deltaArma = (sigInv % deltmp2).i() * (sigInv % deltmp1) * arma::ones<arma::colvec>(p);
        delta_neu[i] = deltaArma;
        DeltaArma = arma::diagmat(deltaArma); 
@@ -872,8 +870,9 @@ int* inform)    // inform message goes here
        //if while stops in the next step, we calculate here the empcov matrix && fisher 
        if((iter + 1 >= iitermax || aitkenError <= eerror) & iter >2){
          
+        
          // observed fisher
-         if(det(SigmaArma)  == 0 | SigmaArma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! New matrix sigma not invertible.") );}
+         if( (det(SigmaArma)  == 0) || SigmaArma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! New matrix sigma not invertible.") );}
          arma::mat SigmaInvTmp = SigmaArma.i();
          
          
@@ -958,7 +957,7 @@ int* inform)    // inform message goes here
          for(int j = 0; j < p; j++){
            for(int k = 0; k < p; k++){
              Rprintf("%f", Rcpp::as<arma::mat>(Sigma_neu[i])(j,k));
-             if(j < p-1 | k < p-1)
+             if( (j < p-1) || (k < p-1) )
              Rprintf(", ");
            }
          }
@@ -980,6 +979,11 @@ int* inform)    // inform message goes here
    
    empcov = arma::zeros<arma::mat>(p2,p2);
    arma::mat empcovRet = arma::zeros<arma::mat>(p2,p2);
+   
+   //calculate fisher
+   fisher = 0
+   
+   if(fisher){
    
    // #ifndef __APPLE__
    // #pragma omp parallel for
@@ -1008,6 +1012,8 @@ int* inform)    // inform message goes here
      empcov += s1 * s1.t();
      
      
+   }
+   
    }
    
    //remove empty elements
