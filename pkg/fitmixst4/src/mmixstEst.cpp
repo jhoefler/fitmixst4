@@ -1,8 +1,8 @@
 #include <RcppArmadillo.h>
 #include <RcppGSL.h>
-#ifndef __APPLE__
-#include <omp.h>
-#endif
+// #ifndef __APPLE__
+// #include <omp.h>
+// #endif
 using namespace Rcpp;
 
 #include <gsl/gsl_errno.h>
@@ -52,9 +52,9 @@ double* error,  // estimated abs. error. with 99% confidence interval
 double* value,     // results store here.
 int* inform)    // inform message goes here
 {
-  #ifndef __APPLE__
-  #pragma omp critical
-  #endif
+  // #ifndef __APPLE__
+  // #pragma omp critical
+  // #endif
   {
     mvtdst_ (n, nu,
     lower, upper, infin, correl, delta,
@@ -660,9 +660,9 @@ int* inform)    // inform message goes here
        
        if(det(cpSigma) == 0 | cpSigma.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t density.") );}
        
-       #ifndef __APPLE__
-       #pragma omp parallel for
-       #endif
+       // #ifndef __APPLE__
+       // #pragma omp parallel for
+       // #endif
        
        for(int j = 0; j < n; j++){
          pro4(j,h) = dmixstc(yyArma.row(j).t(), cpPro, cpMu, cpSigma, cpDelta, cpNu); 
@@ -731,34 +731,25 @@ int* inform)    // inform message goes here
          arma::mat S3;
          
          if(det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0 | Lambda.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for moments is not invertible.") );}
-         int truncerr = truncatedt(&S2, &S3, arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
-         ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
+         // int truncerr = truncatedt(&S2, &S3, arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
+         // ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
+         
+         S2 = truncatedtm1(arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
+                                   ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
+         
+         S3 = truncatedtm2(arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
+                                   ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2, S2);
          
          term3.row(j) = - term2(j) * S2.t();
          term4.slice(j) = term2(j) * S3;
          
-         arma::mat check12 = S3;
-         Rprintf("\n");
-         Rprintf("slice:%i", j);
+         // arma::mat check12 = S3;
+         // Rprintf("\n");
+         // Rprintf("slice:%i", j);
          
-         Rprintf("\n");
-         for(int iii = 0; iii < gg; iii++){
-           Rprintf("delta%i: ", iiii);
-           for(int jjj = 0; jjj < p; jjj++){
-             Rprintf("%f", Rcpp::as<arma::colvec>(check12[iii])(jjj));
-             if(jjj < p-1)
-               Rprintf(", ");
-           }
-           Rprintf("\n");
-         }
-         
-         
-         //if(check12.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in term4.") );}
-         
-         
-         //#ifndef __APPLE__
-         //#pragma omp atomic
-         //#endif
+         // #ifndef __APPLE__
+         // #pragma omp atomic
+         // #endif
          lik_neu += log(sumpro2[j]);
          
        }
@@ -844,12 +835,12 @@ int* inform)    // inform message goes here
        
        arma::uword minInd;
        //determinant < eps
-       if(det(SigmaArma) < 0.000001 ) { 
+       if(det(SigmaArma) < 0.01 ) { 
          arma::vec diagSig = SigmaArma.diag();
          diagSig.min(minInd);
          SigmaArma.row(minInd) = arma::zeros(p).t();
          SigmaArma.col(minInd) = arma::zeros(p);
-         SigmaArma(minInd, minInd) = 0.000001;     
+         SigmaArma(minInd, minInd) = 0.01;     
          if(flag){
            Rf_warning("Collapsed cluster detected! Scale matrix was changed to be postive definite (determinant of scale matrix equals 0.000001 now).");
            flag = 0;
@@ -990,9 +981,9 @@ int* inform)    // inform message goes here
    empcov = arma::zeros<arma::mat>(p2,p2);
    arma::mat empcovRet = arma::zeros<arma::mat>(p2,p2);
    
-   #ifndef __APPLE__
-   #pragma omp parallel for
-   #endif
+   // #ifndef __APPLE__
+   // #pragma omp parallel for
+   // #endif
    for(int j = 0; j < n; j++){
      for(int i = 0; i < gg; i++){
        if(i < gg - 1){
