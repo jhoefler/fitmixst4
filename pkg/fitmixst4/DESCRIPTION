@@ -15,6 +15,6 @@ Depends:
     methods
 Imports:
     Rcpp (>= 0.11.0)
-LinkingTo: RcppGSL, Rcpp, RcppArmadillo
+LinkingTo: RcppGSL, Rcpp, RcppArmadillo, mvtnorm
 Suggests:
     testthat
