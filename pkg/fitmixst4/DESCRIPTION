@@ -1,10 +1,10 @@
 Package: fitmixst4
 Type: Package
 Title: Fitting mixture of skew t distribution
-Version: 0.272
-Date: 2019-04-27
+Version: 0.280
+Date: 2019-05-05
 Author: Josef Hoefler
-Maintainer: Josef Hoefler <josef.hoefler@tum.de>
+Maintainer: Josef Hoefler <josef.hoefler@gmail.com>
 Description: Fitting mixture of skew t distribution
 License: GPL
 OS_type: windows
@@ -12,9 +12,10 @@ Depends:
     R (>= 3.0.0),
     stats,
     stats4,
-    methods
+    methods,
+    mvtnorm
 Imports:
     Rcpp (>= 0.11.0)
-LinkingTo: RcppGSL, Rcpp, RcppArmadillo, mvtnorm
+LinkingTo: RcppGSL, Rcpp, RcppArmadillo,mvtnorm
 Suggests:
     testthat

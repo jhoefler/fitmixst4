@@ -1,8 +1,8 @@
 #include <RcppArmadillo.h>
 #include <RcppGSL.h>
-// #ifndef __APPLE__
-// #include <omp.h>
-// #endif
+#ifndef __APPLE__
+#include <omp.h>
+#endif
 using namespace Rcpp;
 
 #include <gsl/gsl_errno.h>
@@ -16,12 +16,8 @@ using namespace Rcpp;
 #include <sstream>
 #include <fstream>
 
-#define NDEBUG 1
+//#define NDEBUG 1
 //#define ARMA_NO_DEBUG
-
-std::ofstream outfile;
-
-
 
 extern"C" {
   
@@ -227,7 +223,14 @@ int* inform)    // inform message goes here
     arma::vec triang = triangl(corr);
     arma::vec bound = (x - mu) % d;
     int nu = df;
-    return pmvnorm_cpp(bound, triang, nu);
+    
+    double res;
+    
+#ifndef __APPLE__
+#pragma omp critical
+#endif
+    res = pmvnorm_cpp(bound, triang, nu);
+    return res;
  }
  
  //multivariate t distribution
@@ -255,9 +258,6 @@ int* inform)    // inform message goes here
  //       }
  //     }
  //   }
- //   
- //   outfile << "ERROR: pmtc"\n";
- //      outfile.flush();
  //   return pmvnorm_P(p, upper, corrIn, df, &error);
  //   
  // }
@@ -301,228 +301,63 @@ int* inform)    // inform message goes here
    return call.eval();
  }
  
- // int truncatedt(arma::vec* m2, arma::mat* m3, arma::vec a, arma::vec mu, arma::mat sigma, int nuInt){
- //   
- //   int p = a.size();
- //   
- //   double nu = (double) nuInt;
- //   
- //   *m2 = arma::zeros<arma::vec>(p);
- //   *m3 = arma::zeros<arma::mat>(p,p);
- //   
- //   arma::vec  m1(p);
- //   arma::mat  h(p,p);
- //   
- //   arma::vec  tmp2 = arma::zeros<arma::vec>(p);
- //   
- //   arma::vec astar(p - 1);
- //   arma::mat sigmastar(p - 1, p - 1);
- //   double nustar;
- //   
- //   arma::vec astarstar = arma::zeros<arma::vec>(p-2);
- //   arma::mat sigmastarstar = arma::zeros<arma::mat>(p-2, p-2);
- //   
- //   double tmp = 1;
- //   
- //   for(int i = 0; i <p; i++){
- //     arma::vec atmp = a;
- //     arma::vec mutmp = mu;
- //     arma::vec sigmatmp = sigma.col(i);
- //     arma::mat sigmatmp1 = sigma;
- //     
- //     
- //     atmp.shed_row(i);
- //     mutmp.shed_row(i);
- //     sigmatmp.shed_row(i);
- //     
- //     sigmatmp1.shed_row(i);
- //     sigmatmp1.shed_col(i);
- //     
- //     
- //     astar = (atmp - mutmp) - (a(i) - mu(i)) / sigma(i,i) * sigmatmp;
- //     sigmastar = (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2)) / (nu - 1) * (sigmatmp1 - 1/sigma(i,i) * sigmatmp * sigmatmp.t());
- //     
- //     /*use lgamma instead of gamma for calculation to avoid numerical instability*/
- //     m1(i) = pow(2 * M_PI *sigma(i,i), -0.5) * pow((nu / (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2))), (nu - 1) / 2.0) * exp(Rf_lgammafn((nu - 1) / 2.0) -
- //     Rf_lgammafn(nu / 2.0)) *sqrt(nu / 2.0) *
- //     pmtc(astar, arma::zeros<arma::vec>(p-1), sigmastar, nu - 1) /
- //     pmtc(a-mu, arma::zeros<arma::vec>(p), sigma, nu);
- //     
- //     for(int j=0; j < p; j++){
- //       if(i != j){
- //         arma::uvec indices;
- //         indices << i << j;
- //         
- //         arma::vec atmp1 = a;
- //         arma::vec mutmp1 = mu;
- //         arma::mat sigmatmp2 = sigma.cols(indices);
- //         arma::mat sigmatmp3 = sigma;
- //         
- //         //wenn element schon entfernt wurde ist die länge anders
- //         if(i < j){
- //           atmp1.shed_row(i);
- //           atmp1.shed_row(j-1);
- //           mutmp1.shed_row(i);
- //           mutmp1.shed_row(j-1);
- //           sigmatmp2.shed_row(i);
- //           sigmatmp2.shed_row(j-1);
- //           sigmatmp3.shed_row(i);
- //           sigmatmp3.shed_row(j-1);
- //           sigmatmp3.shed_col(i);
- //           sigmatmp3.shed_col(j-1);
- //         }
- //         
- //         if(i > j){
- //           atmp1.shed_row(i);
- //           atmp1.shed_row(j);
- //           mutmp1.shed_row(i);
- //           mutmp1.shed_row(j);
- //           sigmatmp2.shed_row(i);
- //           sigmatmp2.shed_row(j);
- //           sigmatmp3.shed_row(i);
- //           sigmatmp3.shed_row(j);
- //           sigmatmp3.shed_col(i);
- //           sigmatmp3.shed_col(j);
- //         }
- //         
- //         if(det(sigma(indices, indices)) == 0) { throw( std::runtime_error("C++ error: EM algorithm not converging! Moments of truncated t cannot be calculated.") );}
- //         arma::mat sigmaInv = inv_sympd(sigma(indices, indices));
- //         
- //         nustar = (double) nu + arma::as_scalar((a.elem(indices) - mu.elem(indices)).t() *  sigmaInv * (a.elem(indices) - mu.elem(indices)));
- //         
- //         
- //         if(p > 2){
- //           astarstar = atmp1 - mutmp1 - sigmatmp2 * sigmaInv * (a.elem(indices) - mu.elem(indices));
- //           sigmastarstar = nustar / (nu - 2) * (sigmatmp3 - sigmatmp2 * sigmaInv * sigmatmp2.t());
- //           tmp = pmtc(astarstar, arma::zeros<arma::vec>(p-2), sigmastarstar, nu-2);
- //         }
- //         
- //         h(i,j) = - 1 / (2 * M_PI * sqrt(sigma(i, i) * sigma(j, j) - pow(sigma(i, j), 2))) * (nu / (nu - 2)) * pow((nu / nustar),(nu / 2 -1)) * tmp /
- //         pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu);
- //         
- //         tmp2(i) += sigma(i,j) * h(i,j);
- //         
- //         
- //       }
- //     }
- //     
- //   }
- //   
- //   for(int i = 0; i < p; i++){
- //     h(i,i) = 1 / sigma(i,i) * (a(i) - mu(i)) * m1(i) - 1 / sigma(i,i) * tmp2(i);
- //   }
- //   
- //   *m2 = mu - sigma * m1;
- //   *m3 = -mu * mu.t() + mu * (*m2).t() + (*m2) * mu.t() + nu / (nu - 2) *
- //   pmtc(a - mu, arma::zeros<arma::vec>(p), nu / (nu - 2) * sigma, nu - 2) /
- //   pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu) *
- //   sigma - sigma * h * sigma;
- //   
- //   
- //   return 0;
- // }
- 
- 
- 
- 
- 
- 
- arma::vec truncatedtm1(arma::vec a, arma::vec mu, arma::mat sigma, int nuInt){
-   
+ int truncatedt(arma::vec* m2, arma::mat* m3, arma::vec a, arma::vec mu, arma::mat sigma, int nuInt){
+
    int p = a.size();
-   
+
    double nu = (double) nuInt;
-   
-   arma::vec m2(p);
-   //*m3 = arma::zeros<arma::mat>(p,p);
-   
+
+   *m2 = arma::zeros<arma::vec>(p);
+   *m3 = arma::zeros<arma::mat>(p,p);
+
    arma::vec  m1(p);
    arma::mat  h(p,p);
-   
+
    arma::vec  tmp2 = arma::zeros<arma::vec>(p);
-   
+
    arma::vec astar(p - 1);
    arma::mat sigmastar(p - 1, p - 1);
    double nustar;
-   
+
    arma::vec astarstar = arma::zeros<arma::vec>(p-2);
    arma::mat sigmastarstar = arma::zeros<arma::mat>(p-2, p-2);
-   
+
    double tmp = 1;
-   
+
    for(int i = 0; i <p; i++){
      arma::vec atmp = a;
      arma::vec mutmp = mu;
      arma::vec sigmatmp = sigma.col(i);
      arma::mat sigmatmp1 = sigma;
-     
-     
+
+
      atmp.shed_row(i);
      mutmp.shed_row(i);
      sigmatmp.shed_row(i);
-     
+
      sigmatmp1.shed_row(i);
      sigmatmp1.shed_col(i);
-     
-     
+
+
      astar = (atmp - mutmp) - (a(i) - mu(i)) / sigma(i,i) * sigmatmp;
      sigmastar = (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2)) / (nu - 1) * (sigmatmp1 - 1/sigma(i,i) * sigmatmp * sigmatmp.t());
-     
-     outfile << "truncatedm1 i: " << i << " up to 405" << "\n";
-     outfile.flush();
-     
+
+     /*use lgamma instead of gamma for calculation to avoid numerical instability*/
      m1(i) = pow(2 * M_PI *sigma(i,i), -0.5) * pow((nu / (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2))), (nu - 1) / 2.0) * exp(Rf_lgammafn((nu - 1) / 2.0) -
      Rf_lgammafn(nu / 2.0)) *sqrt(nu / 2.0) *
      pmtc(astar, arma::zeros<arma::vec>(p-1), sigmastar, nu - 1) /
      pmtc(a-mu, arma::zeros<arma::vec>(p), sigma, nu);
-     
-     outfile << "truncatedm1 i: " << i << " up to 413" << "\n";
-        outfile.flush();
-     
-   }
-   
-   outfile << "truncatedm1 finished up to 418" << "\n";
-      outfile.flush();
-   
-   return mu - sigma * m1;
-   
- }
- 
- 
- arma::mat truncatedtm2(arma::vec a, arma::vec mu, arma::mat sigma, int nuInt, arma::vec m2){
-   
-   int p = a.size();
-   
-   double nu = (double) nuInt;
-   
-   //m2 = arma::zeros<arma::vec>(p);
-   arma::mat m3(p,p);
-   
-   arma::vec  m1(p);
-   arma::mat  h(p,p);
-   
-   arma::vec  tmp2 = arma::zeros<arma::vec>(p);
-   
-   arma::vec astar(p - 1);
-   arma::mat sigmastar(p - 1, p - 1);
-   double nustar;
-   
-   arma::vec astarstar = arma::zeros<arma::vec>(p-2);
-   arma::mat sigmastarstar = arma::zeros<arma::mat>(p-2, p-2);
-   double tmp = 1;
-   
-   for(int i = 0; i <p; i++){
-     
+
      for(int j=0; j < p; j++){
        if(i != j){
          arma::uvec indices;
          indices << i << j;
-         
+
          arma::vec atmp1 = a;
          arma::vec mutmp1 = mu;
          arma::mat sigmatmp2 = sigma.cols(indices);
          arma::mat sigmatmp3 = sigma;
-         
+
          //wenn element schon entfernt wurde ist die länge anders
          if(i < j){
            atmp1.shed_row(i);
@@ -536,7 +371,7 @@ int* inform)    // inform message goes here
            sigmatmp3.shed_col(i);
            sigmatmp3.shed_col(j-1);
          }
-         
+
          if(i > j){
            atmp1.shed_row(i);
            atmp1.shed_row(j);
@@ -549,45 +384,201 @@ int* inform)    // inform message goes here
            sigmatmp3.shed_col(i);
            sigmatmp3.shed_col(j);
          }
-         
+
          if(det(sigma(indices, indices)) == 0) { throw( std::runtime_error("C++ error: EM algorithm not converging! Moments of truncated t cannot be calculated.") );}
          arma::mat sigmaInv = inv_sympd(sigma(indices, indices));
-         
+
          nustar = (double) nu + arma::as_scalar((a.elem(indices) - mu.elem(indices)).t() *  sigmaInv * (a.elem(indices) - mu.elem(indices)));
-         
-         
+
+
          if(p > 2){
            astarstar = atmp1 - mutmp1 - sigmatmp2 * sigmaInv * (a.elem(indices) - mu.elem(indices));
            sigmastarstar = nustar / (nu - 2) * (sigmatmp3 - sigmatmp2 * sigmaInv * sigmatmp2.t());
            tmp = pmtc(astarstar, arma::zeros<arma::vec>(p-2), sigmastarstar, nu-2);
          }
-         
+
          h(i,j) = - 1 / (2 * M_PI * sqrt(sigma(i, i) * sigma(j, j) - pow(sigma(i, j), 2))) * (nu / (nu - 2)) * pow((nu / nustar),(nu / 2 -1)) * tmp /
          pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu);
-         
+
          tmp2(i) += sigma(i,j) * h(i,j);
-         
-         
+
+
        }
      }
-     
+
    }
-   
+
    for(int i = 0; i < p; i++){
      h(i,i) = 1 / sigma(i,i) * (a(i) - mu(i)) * m1(i) - 1 / sigma(i,i) * tmp2(i);
    }
-   
+
+   *m2 = mu - sigma * m1;
+   *m3 = -mu * mu.t() + mu * (*m2).t() + (*m2) * mu.t() + nu / (nu - 2) *
+   pmtc(a - mu, arma::zeros<arma::vec>(p), nu / (nu - 2) * sigma, nu - 2) /
+   pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu) *
+   sigma - sigma * h * sigma;
+
+
+   return 0;
+ }
+ 
+ 
+ 
+ 
+ 
+
+ arma::vec truncatedtm1(arma::vec a, arma::vec mu, arma::mat sigma, int nuInt){
+
+   int p = a.size();
+
+   double nu = (double) nuInt;
+
+   arma::vec m2(p);
+   //*m3 = arma::zeros<arma::mat>(p,p);
+
+   arma::vec  m1(p);
+   arma::mat  h(p,p);
+
+   arma::vec  tmp2 = arma::zeros<arma::vec>(p);
+
+   arma::vec astar(p - 1);
+   arma::mat sigmastar(p - 1, p - 1);
+   double nustar;
+
+   arma::vec astarstar = arma::zeros<arma::vec>(p-2);
+   arma::mat sigmastarstar = arma::zeros<arma::mat>(p-2, p-2);
+
+   double tmp = 1;
+
+   for(int i = 0; i <p; i++){
+     arma::vec atmp = a;
+     arma::vec mutmp = mu;
+     arma::vec sigmatmp = sigma.col(i);
+     arma::mat sigmatmp1 = sigma;
+
+
+     atmp.shed_row(i);
+     mutmp.shed_row(i);
+     sigmatmp.shed_row(i);
+
+     sigmatmp1.shed_row(i);
+     sigmatmp1.shed_col(i);
+
+
+     astar = (atmp - mutmp) - (a(i) - mu(i)) / sigma(i,i) * sigmatmp;
+     sigmastar = (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2)) / (nu - 1) * (sigmatmp1 - 1/sigma(i,i) * sigmatmp * sigmatmp.t());
+
+     m1(i) = pow(2 * M_PI *sigma(i,i), -0.5) * pow((nu / (nu + 1 / sigma(i,i) * pow(a(i) - mu(i), 2))), (nu - 1) / 2.0) * exp(Rf_lgammafn((nu - 1) / 2.0) -
+     Rf_lgammafn(nu / 2.0)) *sqrt(nu / 2.0) *
+     pmtc(astar, arma::zeros<arma::vec>(p-1), sigmastar, nu - 1) /
+     pmtc(a-mu, arma::zeros<arma::vec>(p), sigma, nu);
+
+   }
+
+   return mu - sigma * m1;
+
+ }
+
+
+ arma::mat truncatedtm2(arma::vec a, arma::vec mu, arma::mat sigma, int nuInt, arma::vec m2){
+
+   int p = a.size();
+
+   double nu = (double) nuInt;
+
+   //m2 = arma::zeros<arma::vec>(p);
+   arma::mat m3(p,p);
+
+   arma::vec  m1(p);
+   arma::mat  h(p,p);
+
+   arma::vec  tmp2 = arma::zeros<arma::vec>(p);
+
+   arma::vec astar(p - 1);
+   arma::mat sigmastar(p - 1, p - 1);
+   double nustar;
+
+   arma::vec astarstar = arma::zeros<arma::vec>(p-2);
+   arma::mat sigmastarstar = arma::zeros<arma::mat>(p-2, p-2);
+   double tmp = 1;
+
+   for(int i = 0; i <p; i++){
+
+     for(int j=0; j < p; j++){
+       if(i != j){
+         arma::uvec indices;
+         indices << i << j;
+
+         arma::vec atmp1 = a;
+         arma::vec mutmp1 = mu;
+         arma::mat sigmatmp2 = sigma.cols(indices);
+         arma::mat sigmatmp3 = sigma;
+
+         //wenn element schon entfernt wurde ist die länge anders
+         if(i < j){
+           atmp1.shed_row(i);
+           atmp1.shed_row(j-1);
+           mutmp1.shed_row(i);
+           mutmp1.shed_row(j-1);
+           sigmatmp2.shed_row(i);
+           sigmatmp2.shed_row(j-1);
+           sigmatmp3.shed_row(i);
+           sigmatmp3.shed_row(j-1);
+           sigmatmp3.shed_col(i);
+           sigmatmp3.shed_col(j-1);
+         }
+
+         if(i > j){
+           atmp1.shed_row(i);
+           atmp1.shed_row(j);
+           mutmp1.shed_row(i);
+           mutmp1.shed_row(j);
+           sigmatmp2.shed_row(i);
+           sigmatmp2.shed_row(j);
+           sigmatmp3.shed_row(i);
+           sigmatmp3.shed_row(j);
+           sigmatmp3.shed_col(i);
+           sigmatmp3.shed_col(j);
+         }
+
+         if(det(sigma(indices, indices)) == 0) { throw( std::runtime_error("C++ error: EM algorithm not converging! Moments of truncated t cannot be calculated.") );}
+         arma::mat sigmaInv = inv_sympd(sigma(indices, indices));
+
+         nustar = (double) nu + arma::as_scalar((a.elem(indices) - mu.elem(indices)).t() *  sigmaInv * (a.elem(indices) - mu.elem(indices)));
+
+
+         if(p > 2){
+           astarstar = atmp1 - mutmp1 - sigmatmp2 * sigmaInv * (a.elem(indices) - mu.elem(indices));
+           sigmastarstar = nustar / (nu - 2) * (sigmatmp3 - sigmatmp2 * sigmaInv * sigmatmp2.t());
+           tmp = pmtc(astarstar, arma::zeros<arma::vec>(p-2), sigmastarstar, nu-2);
+         }
+
+         h(i,j) = - 1 / (2 * M_PI * sqrt(sigma(i, i) * sigma(j, j) - pow(sigma(i, j), 2))) * (nu / (nu - 2)) * pow((nu / nustar),(nu / 2 -1)) * tmp /
+         pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu);
+
+         tmp2(i) += sigma(i,j) * h(i,j);
+
+
+       }
+     }
+
+   }
+
+   for(int i = 0; i < p; i++){
+     h(i,i) = 1 / sigma(i,i) * (a(i) - mu(i)) * m1(i) - 1 / sigma(i,i) * tmp2(i);
+   }
+
    //m2 = mu - sigma * m1;
    m3 = -mu * mu.t() + mu * m2.t() + m2 * mu.t() + nu / (nu - 2) *
    pmtc(a - mu, arma::zeros<arma::vec>(p), nu / (nu - 2) * sigma, nu - 2) /
    pmtc(a - mu, arma::zeros<arma::vec>(p), sigma, nu) *
    sigma - sigma * h * sigma;
-   
-   
+
+
    return m3;
  }
- 
- 
+
+
  
  
  
@@ -674,11 +665,7 @@ int* inform)    // inform message goes here
    NumericVector nu2 = nu_neu;
    
    arma::mat yyArma = Rcpp::as<arma::mat>(yy);
-   
-   // print error messages to a log file
-   outfile.open ("C:\\tmp\\test.txt", std::ofstream::out | std::ofstream::app);
-   
-   
+ 
    //logLik
    double lik, lik_neu;
    lik = 1;
@@ -725,12 +712,7 @@ int* inform)    // inform message goes here
      if (checkInterrupt1()) { break;};
      
      arma::vec pro5 = arma::zeros<arma::vec>(gg);
-     
-     
-     outfile << "Iteration: " << iter << "\n";
-     outfile.flush();
-     
-     
+
      sumpro2 = arma::zeros<arma::vec>(n);
      for(int h = 0; h < gg; h++){
        arma::colvec cpMu = Rcpp::as<arma::colvec>(mu2[h]);
@@ -741,13 +723,11 @@ int* inform)    // inform message goes here
        
        if( (det(cpSigma) == 0) || cpSigma.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in multivariate t density.") );}
        
-       // #ifndef __APPLE__
-       // #pragma omp parallel for
-       // #endif
-       
+       #ifndef __APPLE__
+       #pragma omp parallel for
+       #endif
        for(int j = 0; j < n; j++){
          pro4(j,h) = dmixstc(yyArma.row(j).t(), cpPro, cpMu, cpSigma, cpDelta, cpNu); 
-         
        }
        sumpro2 += pro4.col(h);
      }
@@ -757,11 +737,7 @@ int* inform)    // inform message goes here
        pro5(h) = sum(pro4.col(h));
      }
      
-     outfile << "Iteration: " << iter << "after ex. l683" << "\n";
-     outfile.flush();
-     
-     
-     for(int i = 0; i < gg; i++){
+       for(int i = 0; i < gg; i++){
        
        arma::colvec muArma = Rcpp::as<arma::colvec>(mu2[i]);
        arma::mat SigmaArma = Rcpp::as<arma::mat>(Sigma2[i]);
@@ -786,18 +762,12 @@ int* inform)    // inform message goes here
        
        arma::vec t1vec(n), t2vec(n);
        //#pragma omp for ordered schedule(dynamic)
-       
-       //#ifndef __APPLE__
-       //#pragma omp parallel for
-       //#endif
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l717" << "\n";
-       outfile.flush();
-       
+
+       #ifndef __APPLE__
+       #pragma omp parallel for
+       #endif
        for(int j = 0; j < n; j++){
-		   outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 722" << "\n";
-		   outfile.flush();
-         
+
          arma::colvec qRow = DeltaArma * OmegaInv * (yyArma.row(j).t() - muArma);
          
          q.row(j) = (arma::mat(qRow)).t();
@@ -805,17 +775,11 @@ int* inform)    // inform message goes here
          d[j] = arma::as_scalar((yyArma.row(j).t() - muArma).t() * OmegaInv * (yyArma.row(j).t() - muArma));
          
          y_star.row(j)  = q.row(j)  * sqrt((nu2[i] + p) / (nu2[i] + d[j] ));
-		   outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 732" << "\n";
-		   outfile.flush();
-         
+
          if( (det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0) || Lambda.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for distribution function is not invertible.") );}
-         outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 736" << "\n";
-		   outfile.flush();
-		 t1vec(j) = pmtc(q.row(j).t() * sqrt((nu2[i] + p + 2) / (nu2[i] + d[j])), arma::zeros(p,1), Lambda, round(nu2[i] + p + 2));
-		 
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 741" << "\n";
-		   outfile.flush();
-         t2vec(j) = pmtc(y_star.row(j).t(), arma::zeros(p,1), Lambda, round(nu2[i] + p));
+
+		   t1vec(j) = pmtc(q.row(j).t() * sqrt((nu2[i] + p + 2) / (nu2[i] + d[j])), arma::zeros(p,1), Lambda, round(nu2[i] + p + 2));
+		   t2vec(j) = pmtc(y_star.row(j).t(), arma::zeros(p,1), Lambda, round(nu2[i] + p));
          
          term2[j] = (nu2[i] + p) / (nu2[i] + d[j]) * t1vec(j) / t2vec(j);
          
@@ -824,54 +788,35 @@ int* inform)    // inform message goes here
          
          arma::vec S2;
          arma::mat S3;
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 752" << "\n";
-		   outfile.flush();
-         
+
          if( (det(((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda) == 0) || Lambda.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Scale matrix for moments is not invertible.") );}
          // int truncerr = truncatedt(&S2, &S3, arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
          // ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
          
          S2 = truncatedtm1(arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
                                    ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2);
-         
-         outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 761" << "\n";
-		   outfile.flush();
+
          S3 = truncatedtm2(arma::zeros(p,1), -arma::conv_to<arma::colvec>::from( q.row(j) ),
                                    ((nu2[i] + d[j]) / (nu2[i] + p + 2)) * Lambda, round(nu2[i]) + p + 2, S2);
-         
+
          if(S2.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in truncatedt, S2.") );}
          if(S3.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in truncatedt, S3.") );}
          
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 769" << "\n";
-		   outfile.flush();
-		 
+
          term3.row(j) = - term2(j) * S2.t();
-		 
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 774" << "\n";
-		   outfile.flush();
          term4.slice(j) = term2(j) * S3;
          
          // arma::mat check12 = S3;
          // Rprintf("\n");
          // Rprintf("slice:%i", j);
          
-         // #ifndef __APPLE__
-         // #pragma omp atomic
-         // #endif
-		 
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 786" << "\n";
-		   outfile.flush();
+         #ifndef __APPLE__
+         #pragma omp atomic
+         #endif
          lik_neu += log(sumpro2[j]);
-		 
-		 outfile << "Iteration: " << iter << " Comp: " << i << " Obs: " << j << " after ex. 790" << "\n";
-		   outfile.flush();
-         
+
        }
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l770" << "\n";
-       outfile.flush();
-       
-       
+
        if(term3.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in truncatedt, term3.") );}
        if(term4.has_nan()) { throw( std::runtime_error("C++ error: EM algorithm not converging! Error in truncatedt, term4.") );}
        
@@ -903,10 +848,7 @@ int* inform)    // inform message goes here
        if((mutmp2 == 0) || mutmp2 != mutmp2) { throw( std::runtime_error("C++ error: EM algorithm not converging! Division by zero for recalculating mu.") );}
        muArma = (mutmp - DeltaArma * mutmp1) / mutmp2;
        mu_neu[i] = muArma;
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l806" << "\n";
-       outfile.flush();
-       
+
        arma::mat deltmp1 = arma::zeros<arma::mat>(p,p);
        arma::mat deltmp2 = arma::zeros<arma::mat>(p,p);
        
@@ -922,11 +864,7 @@ int* inform)    // inform message goes here
          sumterm1pro3 += term1[k] * pro4(k,i);
          sumterm1pro3nu += pro4(k,i)* (term2[k] - term1[k] -1);
        }
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l825" << "\n";
-       outfile.flush();
-       
-       
+
        if( (det(SigmaArma)  == 0) || SigmaArma.has_nan() ) { throw( std::runtime_error("C++ error: EM algorithm not converging! Matrix sigma not invertible.") );}
        arma::mat sigInv = inv_sympd(SigmaArma);
        
@@ -934,10 +872,7 @@ int* inform)    // inform message goes here
        deltaArma = inv_sympd(sigInv % deltmp2) * (sigInv % deltmp1) * arma::ones<arma::colvec>(p);
        delta_neu[i] = deltaArma;
        DeltaArma = arma::diagmat(deltaArma); 
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l837" << "\n";
-       outfile.flush();
-       
+
        arma::mat sigtmp = arma::zeros<arma::mat>(p,p);
        double sigtmp2 = 0.0;
        arma::rowvec cenmu(p);
@@ -955,11 +890,7 @@ int* inform)    // inform message goes here
        double sigtmpCheck = arma::as_scalar(sigtmp2);
        if(sigtmpCheck == 0  || sigtmpCheck != sigtmpCheck) { throw( std::runtime_error("C++ error: EM algorithm not converging! Division by zero for recalculating sigma.") );}
        SigmaArma = sigtmp / sigtmp2;
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l858" << "\n";
-       outfile.flush();
-       
-       
+
        arma::uword minInd;
        //determinant < eps
        while(!SigmaArma.is_sympd(0.001)) { 
@@ -974,10 +905,7 @@ int* inform)    // inform message goes here
          }
        }
        Sigma_neu[i] = SigmaArma;
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l877" << "\n";
-       outfile.flush();
-       
+
        double nuSolve;
        nuSolve = sumterm1pro3nu / sigtmp2;
        //nu_neu[i]  = (roots1(nuSolve));
@@ -998,10 +926,7 @@ int* inform)    // inform message goes here
          Rf_warning("Degrees of freedom getting to large and are set to 1000 in this iteration.");
          flag2 = 0;
        }
-       
-       outfile << "Iteration: " << iter << " Comp: " << i << "after ex. l901" << "\n";
-       outfile.flush();
-       
+
        //if while stops in the next step, we calculate here the empcov matrix && fisher 
        if((iter + 1 >= iitermax || aitkenError <= eerror) & (iter > 2) ){
          
@@ -1047,10 +972,7 @@ int* inform)    // inform message goes here
        }
        
      }
-     
-     outfile << "Iteration: " << iter << "after ex. l950" << "\n";
-     outfile.flush();
-     
+
      iter++;
      
      likConvergence[iter - 1] = lik_neu;
@@ -1119,14 +1041,14 @@ int* inform)    // inform message goes here
    arma::mat empcovRet = arma::zeros<arma::mat>(p2,p2);
    
    //calculate fisher
-   int fisher = 0;
+   int fisher = 1;
    
    if(fisher){
    
-   // #ifndef __APPLE__
-   // #pragma omp parallel for
-   // #endif
    for(int j = 0; j < n; j++){
+#ifndef __APPLE__
+#pragma omp parallel for
+#endif
      for(int i = 0; i < gg; i++){
        if(i < gg - 1){
          s1(i) = s1pi(j, i);
@@ -1153,10 +1075,7 @@ int* inform)    // inform message goes here
    }
    
    }
-   
-   outfile << "Iteration: " << iter << "after ex. l1056" << "\n";
-   outfile.flush();
-   
+
    //remove empty elements
    likConvergence.erase (likConvergence.begin() + iter,likConvergence.end());
    if(iter == iitermax){
@@ -1168,12 +1087,7 @@ int* inform)    // inform message goes here
    }else{
      Rf_warning("Calculating the empricical fisher information failed. Matrix not invertible.");
    }
-   
-   outfile << "Iteration: " << iter << "after ex. l1071" << "\n";
-   outfile.flush();
-   
-   outfile.close();
-   
+
    return Rcpp::List::create(Rcpp::Named("pro") = pro_neu,
    Rcpp::Named("mu") = mu_neu,
    Rcpp::Named("Sigma") = Sigma_neu,

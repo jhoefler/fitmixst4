@@ -1,8 +1,8 @@
 
-GSL_CFLAGS = -IC:/gsl/local323/include
-GSL_LIBS   = -LC:/gsl/local323/lib -lgsl -lgslcblas
+GSL_CFLAGS = -IC:/RBuildTools/local323//include
+GSL_LIBS   = -LC:/RBuildTools/local323//lib -lgsl -lgslcblas
 RCPP_LDFLAGS = 
 
 # combine with standard arguments for R
-PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include
-PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+PKG_CPPFLAGS = -W $(GSL_CFLAGS) -I../inst/include -fopenmp -lgomp
+PKG_LIBS += $(GSL_LIBS) $(RCPP_LDFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS) -fopenmp -lgomp
