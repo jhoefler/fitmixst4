@@ -51,18 +51,18 @@ fitmixst <- function(y, g, rel.error = 1e-3, itermax=1000,
         if(sum(init$cluster == j) > 1){
           Sigma[[j]] <- cov(y[init$cluster == j,]) + (a-1)*diag(diag(cov(y[init$cluster == j,])))
           
-          while(det(Sigma[[j]]) <= 0.000001 && a < 0.9){
+          while(min(eigen(Sigma[[j]])$values) <= 0 && a < 0.9){
             a = round(a+0.1,2)
             Sigma[[j]] <- cov(y[init$cluster == j,]) + (a-1)*diag(diag(cov(y[init$cluster == j,])))
             warning("Parameter a changed for positive definite starting value of sigma.")
           }
           
-          if(det(Sigma[[j]]) <= 0.000001){
+          if(min(eigen(Sigma[[j]])$values) <= 0){
             Sigma[[j]] <- cov(y[init$cluster == j,])
             warning("Scale matrix sigma changed for positive definite starting value.")
           }
           
-          if(det(Sigma[[j]]) <= 0.000001){
+          if(min(eigen(Sigma[[j]])$values) <= 0){
             Sigma[[j]] <- diag(diag(Sigma[[j]]))
             warning("Scale matrix sigma changed for positive definite starting value.")
           }
